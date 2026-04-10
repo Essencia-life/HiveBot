@@ -1,48 +1,33 @@
 import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
-
-const SECRET_KEY = randomBytes(32); // TODO store token in env vars instead of always re-creating
-
-console.log(encryptParam({ id: 48968362, first_name: 'Ben' }));
+import { PARAM_ENCRYPTION_KEY } from '$env/static/private';
 
 export function encryptParam(data: unknown) {
-    const iv = randomBytes(12);
-    const cipher = createCipheriv('aes-256-gcm', SECRET_KEY, iv);
+	const iv = randomBytes(12);
+	const cipher = createCipheriv('aes-256-gcm', PARAM_ENCRYPTION_KEY, iv);
 
-    const encrypted = Buffer.concat([
-        cipher.update(JSON.stringify(data), 'utf8'),
-        cipher.final()
-    ]);
+	const encrypted = Buffer.concat([cipher.update(JSON.stringify(data), 'utf8'), cipher.final()]);
 
-    const authTag = cipher.getAuthTag();
+	const authTag = cipher.getAuthTag();
 
-    const payload = Buffer.concat([iv, encrypted, authTag]);
+	const payload = Buffer.concat([iv, encrypted, authTag]);
 
-    return payload
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
+	return payload.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export function decryptParam(encoded: string) {
-    const base64 = encoded
-        .replace(/-/g, '+')
-        .replace(/_/g, '/')
-        + '==='.slice((encoded.length + 3) % 4);
+	const base64 =
+		encoded.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((encoded.length + 3) % 4);
 
-    const payload = Buffer.from(base64, 'base64');
+	const payload = Buffer.from(base64, 'base64');
 
-    const iv = payload.subarray(0, 12);
-    const authTag = payload.subarray(payload.length - 16);
-    const encrypted = payload.subarray(12, payload.length - 16);
+	const iv = payload.subarray(0, 12);
+	const authTag = payload.subarray(payload.length - 16);
+	const encrypted = payload.subarray(12, payload.length - 16);
 
-    const decipher = createDecipheriv('aes-256-gcm', SECRET_KEY, iv);
-    decipher.setAuthTag(authTag);
+	const decipher = createDecipheriv('aes-256-gcm', PARAM_ENCRYPTION_KEY, iv);
+	decipher.setAuthTag(authTag);
 
-    const decrypted = Buffer.concat([
-        decipher.update(encrypted),
-        decipher.final()
-    ]);
+	const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 
-    return JSON.parse(decrypted.toString('utf8'));
+	return JSON.parse(decrypted.toString('utf8'));
 }
