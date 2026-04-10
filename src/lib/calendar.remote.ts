@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import { query, command, getRequestEvent } from '$app/server';
 import { decryptParam } from '$lib/server/encryption';
 import { Calendar } from '$lib/server/calendar';
-import { updateInlineMessage } from '$lib/server/bot';
+import { updateAgenda, updateInlineMessage } from '$lib/server/bot';
 import { CO_WORKING_CALENDAR_ID, HIVE_CALENDAR_ID } from '$env/static/private';
 
 export const getBookings = query(v.pipe(v.string(), v.nonEmpty()), async (date) => {
@@ -78,6 +78,8 @@ export const createBooking = command(
 			}
 		});
 
+		await updateAgenda(res.data);
+
 		void getBookings(startDate.substring(0, 10)).refresh();
 
 		return res.data.id!;
@@ -107,6 +109,8 @@ export const deleteBooking = command(v.string(), async (id: string) => {
 	if (telegramInlineMessageId) {
 		await updateInlineMessage(telegramInlineMessageId, booking, true);
 	}
+
+	await updateAgenda(booking);
 
 	void getBookings(booking.start!.dateTime!.substring(0, 10)).refresh();
 });
@@ -146,6 +150,8 @@ export const updateBooking = command(
 		if (telegramInlineMessageId) {
 			await updateInlineMessage(telegramInlineMessageId, res.data);
 		}
+
+		await updateAgenda(res.data);
 
 		void getBookings(startDate.substring(0, 10)).refresh();
 
