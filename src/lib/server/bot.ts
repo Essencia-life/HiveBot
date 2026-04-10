@@ -1,5 +1,5 @@
 import { BOT_ADMIN_CHAT_ID, BOT_TOKEN, BOT_WEB_APP, CO_WORKING_CALENDAR_ID } from '$env/static/private';
-import { Bot, GrammyError, HttpError, InlineQueryResultBuilder } from 'grammy';
+import { Bot, GrammyError, HttpError, InlineKeyboard, InlineQueryResultBuilder } from 'grammy';
 import { encryptParam } from './encryption';
 import { Calendar, type CalendarEvent } from './calendar';
 import { GaxiosError } from 'gaxios';
@@ -36,6 +36,47 @@ bot.on('inline_query', async ctx => {
     })
 });
 
+function generateBookingMessage(booking: CalendarEvent, deleted: boolean) {
+    const startDate = new Date(booking.start!.dateTime!);
+    const endDate = new Date(booking.end!.dateTime!);
+
+    const tgTime = (date: Date, text: string) => deleted ? text : `<tg-time unix="${date.getTime() / 1000}">${text}</tg-time>`;
+    const strikethrough = (text: string) => deleted ? `<s>${text}</s>` : text;
+
+    const time = `${startDate.toLocaleDateString('en-gb', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit',
+        timeZone: 'Europe/Lisbon'
+    }).replaceAll('/', '.')}\n${startDate.toLocaleTimeString('en-gb', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Europe/Lisbon'
+    })} – ${endDate.toLocaleTimeString('en-gb', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Europe/Lisbon'
+    })}`;
+
+    return strikethrough(`💻 I booked the Hive for ${booking.description}\n\non ${tgTime(startDate, time)}`);
+}
+
+export async function updateInlineMessage(inlineMessageId: string, event: CalendarEvent, deleted = false) {
+    const text = generateBookingMessage(event, deleted);
+
+    try {
+        await bot.api.editMessageTextInline(inlineMessageId, text, {
+            parse_mode: 'HTML',
+            reply_markup: new InlineKeyboard().switchInlineCurrent('Manage bookings')
+        });
+    } catch (err) {
+        console.error('Failed to update inline message:', err);
+    }
+}
+
 function createInlineQueryArticlesFromBookings(bookings: CalendarEvent[]) {
     return bookings.map(booking => {
         const startDate = new Date(booking.start!.dateTime!);
@@ -52,31 +93,16 @@ function createInlineQueryArticlesFromBookings(bookings: CalendarEvent[]) {
             timeZone: 'Europe/Lisbon'
         });
 
-        const message = `💻 I booked the Hive for ${booking.description}\n\non <b><tg-time unix="${startDate.getTime() / 1000}">${startDate.toLocaleDateString('en-gb', {
-            weekday: 'long',
-            day: '2-digit',
-            month: '2-digit',
-            year: '2-digit',
-            timeZone: 'Europe/Lisbon'
-        }).replaceAll('/', '.')}\n${startDate.toLocaleTimeString('en-gb', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-            timeZone: 'Europe/Lisbon'
-        })} – ${endDate.toLocaleTimeString('en-gb', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-            timeZone: 'Europe/Lisbon'
-        })}</tg-time></b>`;
+        const message = generateBookingMessage(booking);
 
         return InlineQueryResultBuilder.article(booking.id!, title, {
             description: 'Click here to post your booking to this chat.',
             thumbnail_url: 'https://emojiapi.dev/api/v1/laptop/96.png',
             thumbnail_height: 96,
             thumbnail_width: 96,
+            reply_markup: new InlineKeyboard().switchInlineCurrent('Manage bookings')
         }).text(message, {
-            parse_mode: 'HTML',
+            parse_mode: 'HTML'
         });
     });
 }

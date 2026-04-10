@@ -66,6 +66,13 @@ export class Calendar {
         });
     }
 
+    async deleteEvent(eventId: string) {
+        return calendar.events.delete({
+            calendarId: this.calendarId,
+            eventId
+        });
+    }
+
     async getFreeBusy(start: string, end: string): Promise<TimePeriod[]> {
         const res = await calendar.freebusy.query({
             requestBody: {

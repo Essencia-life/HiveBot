@@ -1,6 +1,11 @@
 <script lang="ts">
 	import WebApp from '@twa-dev/sdk';
-	import { checkAvailability, createBooking } from '$lib/calendar.remote';
+	import {
+		checkAvailability,
+		createBooking,
+		deleteBooking,
+		updateBooking
+	} from '$lib/calendar.remote';
 	import type { PageProps } from './$types';
 	import type { Attachment } from 'svelte/attachments';
 	import { goto } from '$app/navigation';
@@ -43,7 +48,8 @@
 					hour: '2-digit',
 					minute: '2-digit',
 					timeZone: data.booking.start!.timeZone!
-				}) : undefined;
+				})
+			: undefined;
 
 		if (date && startTime !== bookingStartTime) {
 			const startDate = new Date(date + ' ' + startTime);
@@ -56,6 +62,8 @@
 				timeZone: 'Europe/Lisbon'
 			});
 		}
+
+		return '';
 	});
 	let description = $derived(data.booking?.description ?? '');
 	let duration = $state(ms('30m'));
@@ -77,7 +85,14 @@
 		if (busy.length > 0) {
 			WebApp.showAlert('The Hive is already booked during ' + formatBusyTimes(busy));
 		} else if (params.id) {
-			// TODO: update booking if params.id is set
+			await updateBooking({
+				id: params.id,
+				startDate,
+				endDate,
+				description: description.trim()
+			});
+
+			history.back();
 		} else {
 			const bookingId = await createBooking({
 				startDate,
@@ -86,6 +101,17 @@
 			});
 
 			WebApp.switchInlineQuery(bookingId);
+		}
+	}
+
+	async function confirmDeleteBooking() {
+		const confirmed = await new Promise((resolve) =>
+			WebApp.showConfirm('Are you sure you want to delete this booking?', resolve)
+		);
+
+		if (confirmed) {
+			await deleteBooking(params.id!);
+			history.back();
 		}
 	}
 
@@ -205,6 +231,9 @@
 			For ...
 			<input required bind:value={description} autocapitalize="off" placeholder="a reason" />
 		</label>
+		{#if params.id}
+			<button type="button" class="delete" onclick={confirmDeleteBooking}> Delete </button>
+		{/if}
 		<button {disabled}>Book</button>
 	</form>
 </dialog>
@@ -276,6 +305,10 @@
 		border-radius: 8px;
 		background: seagreen;
 		color: white;
+	}
+
+	button.delete {
+		background: sienna;
 	}
 
 	button:disabled {

@@ -3,7 +3,7 @@
 	import { on } from 'svelte/events';
 	import WebApp from '@twa-dev/sdk';
 	import type { PageProps } from './$types';
-	import { goto, preloadCode } from '$app/navigation';
+	import { afterNavigate, goto, preloadCode } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { SvelteDate } from 'svelte/reactivity';
@@ -45,11 +45,14 @@
 	});
 
 	function percent(date: Date) {
-		const start = startOfDay.getTime();
-		const end = endOfDay.getTime();
-		const total = end - start;
+		const start = new Date(startOfDay);
+		start.setHours(0, 0, 0, 0);
 
-		return ((date.getTime() - start) / total) * 100 + '%';
+		const end = new Date(start);
+		end.setHours(24, 0, 0, 0);
+
+		const percentValue = (date.getTime() - start.getTime()) / (end.getTime() - start.getTime());
+		return `${Math.min(Math.max(percentValue, 0), 1) * 100}%`;
 	}
 
 	function timeToRows(start: string, end: string) {
@@ -95,6 +98,10 @@
 	}
 
 	function refreshInterval() {
+		if (refreshIntervalInstance) {
+			window.clearInterval(refreshIntervalInstance);
+		}
+
 		refreshIntervalInstance = window.setInterval(() => getBookings(params.date).refresh(), 30_000);
 	}
 
@@ -125,8 +132,12 @@
 		}
 	});
 
-	$effect(() => {
-		WebApp.BackButton[page.route.id === '/[date=date]' ? 'hide' : 'show']();
+	afterNavigate((navigation) => {
+		if (navigation.to?.route.id === '/[date=date]') {
+			WebApp.BackButton.hide();
+		} else {
+			WebApp.BackButton.show();
+		}
 	});
 </script>
 
@@ -143,10 +154,15 @@
 				})
 				.replaceAll('/', '.')}
 		</h2>
-		<input type="date" value={params.date} oninput={(event) => goto(resolve('/[date=date]', { date: event.target.value }), {
-			replaceState: true,
-			noScroll: true
-		})} />
+		<input
+			type="date"
+			value={params.date}
+			oninput={(event) =>
+				goto(resolve('/[date=date]', { date: event.currentTarget.value }), {
+					replaceState: true,
+					noScroll: true
+				})}
+		/>
 	</label>
 	<button onclick={nextDay}>&rsaquo;</button>
 </header>
@@ -167,7 +183,7 @@
 		{#each await getBookings(params.date) as booking (booking.id)}
 			{@const isOwn =
 				booking.extendedProperties?.shared?.telegramUserId === data.user.id.toString()}
-				
+
 			<svelte:element
 				this={isOwn ? 'a' : 'div'}
 				class="booking"
@@ -224,13 +240,13 @@
 	}
 
 	header input {
-		position: absolute; 
+		position: absolute;
 		bottom: 0;
-		max-height: 0; 
-		overflow: hidden; 
-		padding: 0; 
-		border: 0; 
-		background: transparent; 
+		max-height: 0;
+		overflow: hidden;
+		padding: 0;
+		border: 0;
+		background: transparent;
 		opacity: 0;
 	}
 
@@ -299,6 +315,7 @@
 		inset-inline: 0;
 		top: var(--now);
 		border-top: 2px solid tomato;
+		pointer-events: none;
 	}
 
 	.now::before {
