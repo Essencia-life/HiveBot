@@ -3,7 +3,7 @@ import { PARAM_ENCRYPTION_KEY } from '$env/static/private';
 
 export function encryptParam(data: unknown) {
 	const iv = randomBytes(12);
-	const cipher = createCipheriv('aes-256-gcm', PARAM_ENCRYPTION_KEY, iv);
+	const cipher = createCipheriv('aes-256-gcm', Buffer.from(PARAM_ENCRYPTION_KEY, 'hex'), iv);
 
 	const encrypted = Buffer.concat([cipher.update(JSON.stringify(data), 'utf8'), cipher.final()]);
 
@@ -24,7 +24,7 @@ export function decryptParam(encoded: string) {
 	const authTag = payload.subarray(payload.length - 16);
 	const encrypted = payload.subarray(12, payload.length - 16);
 
-	const decipher = createDecipheriv('aes-256-gcm', PARAM_ENCRYPTION_KEY, iv);
+	const decipher = createDecipheriv('aes-256-gcm', Buffer.from(PARAM_ENCRYPTION_KEY, 'hex'), iv);
 	decipher.setAuthTag(authTag);
 
 	const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
