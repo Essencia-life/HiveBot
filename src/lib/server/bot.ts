@@ -28,9 +28,11 @@ bot.on('inline_query', async (ctx) => {
 	const coWorkingCalendar = new Calendar(CO_WORKING_CALENDAR_ID);
 
 	if (ctx.inlineQuery.query !== '') {
-		const booking = await coWorkingCalendar.getEvent(ctx.inlineQuery.query);
+		const id = ctx.inlineQuery.query.trim();
+		let booking = await coWorkingCalendar.getEvent(id);
 
 		if (booking) {
+			booking.id = id;
 			return ctx.answerInlineQuery(createInlineQueryArticlesFromBookings([booking]), {
 				cache_time: 0,
 				is_personal: true
