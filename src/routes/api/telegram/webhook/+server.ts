@@ -30,7 +30,7 @@ export const PUT: RequestHandler = async ({ url }) => {
 			// "poll",
 			// "poll_answer",
 			// 'chat_member',
-			'my_chat_member'
+			'my_chat_member',
 			// "chat_join_request",
 			// "chat_boost",
 			// "removed_chat_boost",

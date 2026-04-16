@@ -10,12 +10,19 @@ import { Bot, GrammyError, HttpError, InlineKeyboard, InlineQueryResultBuilder }
 import { encryptParam } from './encryption';
 import { Calendar, type CalendarEvent } from './calendar';
 import { GaxiosError } from 'gaxios';
-import { dev } from '$app/environment';
-import ms from 'ms';
 import { generateAgenda } from '$lib/server/agenda';
 import { redis } from '$lib/server/redis';
 
 export const bot = new Bot(BOT_TOKEN);
+
+bot.on('my_chat_member', async (ctx) => {
+	const { status } = ctx.myChatMember.new_chat_member;
+
+	if (status === 'member' && ctx.chatId !== Number(BOT_GROUP_CHAT_ID)) {
+		console.warn(`Chat Id ${ctx.chatId} is not allowed to use this bot.`);
+		await bot.api.leaveChat(ctx.chatId);
+	}
+});
 
 bot.on('inline_query', async (ctx) => {
 	const coWorkingCalendar = new Calendar(CO_WORKING_CALENDAR_ID);
@@ -25,7 +32,7 @@ bot.on('inline_query', async (ctx) => {
 
 		if (booking) {
 			return ctx.answerInlineQuery(createInlineQueryArticlesFromBookings([booking]), {
-				cache_time: dev ? 0 : ms('1d'),
+				cache_time: 0,
 				is_personal: true
 			});
 		}
@@ -65,16 +72,16 @@ function generateBookingMessage(booking: CalendarEvent, deleted = false) {
 			timeZone: 'Europe/Lisbon'
 		})
 		.replaceAll('/', '.')}\n${startDate.toLocaleTimeString('en-gb', {
-		hour: '2-digit',
-		minute: '2-digit',
-		hour12: false,
-		timeZone: 'Europe/Lisbon'
-	})} – ${endDate.toLocaleTimeString('en-gb', {
-		hour: '2-digit',
-		minute: '2-digit',
-		hour12: false,
-		timeZone: 'Europe/Lisbon'
-	})}`;
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false,
+			timeZone: 'Europe/Lisbon'
+		})} – ${endDate.toLocaleTimeString('en-gb', {
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false,
+			timeZone: 'Europe/Lisbon'
+		})}`;
 
 	return strikethrough(
 		`💻 I booked the Hive for ${booking.description}\n\non ${tgTime(startDate, time)}`
