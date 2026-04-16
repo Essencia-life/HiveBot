@@ -187,6 +187,8 @@ bot.catch(async (err) => {
 
 	let message = `🚨 * Bot Error *\n`;
 
+	message += `\n• Environment: \`${VERCEL_ENV}\``;
+
 	if (ctx) {
 		message += `\n• Update ID: \`${ctx.update.update_id}\``;
 		if (ctx.chat) message += `\n• Chat ID: \`${ctx.chat.id}\``;
