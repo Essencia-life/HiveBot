@@ -12,5 +12,7 @@ if (dev) {
 		) {
 			throw err;
 		}
+	}).then(() => {
+		void bot.api.setMyShortDescription('development');
 	});
 }

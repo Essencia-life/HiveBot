@@ -1,7 +1,7 @@
 import { bot } from '$lib/server/bot';
 import { webhookCallback } from 'grammy';
 import type { RequestHandler } from './$types';
-import { BOT_SECRET_TOKEN } from '$env/static/private';
+import { BOT_SECRET_TOKEN, VERCEL_ENV } from '$env/static/private';
 import { error } from '@sveltejs/kit';
 
 export const POST = webhookCallback(bot, 'sveltekit', {
@@ -40,6 +40,8 @@ export const PUT: RequestHandler = async ({ url }) => {
 	if (!success) {
 		error(500, 'Failed setting webhook');
 	}
+
+	bot.api.setMyShortDescription(VERCEL_ENV);
 
 	return new Response(null, { status: 201 });
 };
