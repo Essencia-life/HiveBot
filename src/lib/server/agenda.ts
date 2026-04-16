@@ -37,8 +37,9 @@ function formatEvent(event: CalendarEvent) {
 			? `<tg-time unix="${Math.floor(startDate.getTime() / 1000)}">${startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Lisbon' })} – ${endDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Lisbon' })}</tg-time>`
 			: '';
 
-	const title = escapeHtml(event.summary);
-	const description = event.description ? escapeHtml(event.description) : '';
+	const isPersonalBooking = !!event.extendedProperties?.shared?.telegramUserId;
+	const title = escapeHtml(event.summary!);
+	const description = event.description && isPersonalBooking ? escapeHtml(event.description) : '';
 
 	return `<blockquote>${timeString}\n<b>${title}</b> ${description}</blockquote>`;
 }
